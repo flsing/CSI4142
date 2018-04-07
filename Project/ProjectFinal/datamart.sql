@@ -1,22 +1,25 @@
-﻿Alter table cost_dimension
-alter column normalized_total_cost type text,
-alter column federal_payments type text,
-alter column provincial_payments type text,
-alter column  insurance_payments type text,
-alter column  ngo_payments type text,
-alter column  ogd_cost type text,
-alter column  municipal_cost type text,
-alter column  estimated_total_cost type text;
+﻿-- Deletion queries to restart db and restart serial
 
--- Deletion queried to restart db
 DELETE FROM "cost_dimension";
+ALTER SEQUENCE cost_dimension_cost_key_seq RESTART;
 Delete FROM "date_dimension";
+ALTER SEQUENCE date_dimension_date_key_seq RESTART;
 Delete FROM "disaster_dimension";
+ALTER SEQUENCE disaster_dimension_disaster_key_seq RESTART;
 Delete FROM "location_dimension";
-Delete FROM "population_dimension";
+ALTER SEQUENCE location_dimension_location_key_seq RESTART;
 Delete FROM "summary_dimension";
+ALTER SEQUENCE summary_dimension_description_key_seq RESTART;
+
 Delete FROM "disaster_fact";
+
+-- dont always want to delete this only after i reformat it to utf-8
 Delete FROM "placeholder";
+ALTER SEQUENCE placeholder_sid_seq RESTART;
+
+-- dont want to delete this only after i have the full csv done
+Delete FROM "population_dimension";
+ALTER SEQUENCE population_dimension_population_key_seq RESTART;
 
 -- Insert into dimensions
 Insert into cost_dimension(normalized_total_cost,federal_dfaa_payment,provincial_dfaa_payment,
@@ -59,8 +62,19 @@ INSERT INTO summary_dimension(summary)
 SELECT comments
 FROM placeholder;
 
+-- fact table
+INSERT INTO disaster_fact(start_date_key,location_key, disaster_key, description_key,
+cost_key, fatalities, injured, evacuated, population_key)
+Select c.cost_key, d.date_key, z.disaster_key, l.location_key, s.description_key, 
+p.fatalities, p.injured, p.evacuated, o.population_key 
+FROM "cost_dimension" c, "date_dimension" d, "disaster_dimension" z, "location_dimension" l,
+"population_dimension" o, "summary_dimension" s, "placeholder" p
+WHERE c.cost_key = p.key and p.key = d.date_key AND p.key = z.disaster_key AND 
+p.key = l.location_key AND p.key = s.description_key AND o.geographic_name = l.city;
 
-Insert into disaster_fact()
-Select e."event-date-key" , l."location-key", s."shape-key", r."reported-date-key", u."Duration"
-FROM "Location" l, "Shape" s, "Reported-Date" r, "Event-Date" e, "ufo" u
-WHERE e."event-date-key" = u."id" and u."id" = l."location-key" and u."id" = r."reported-date-key" and u."id" = s."shape-key";
+INSERT INTO disaster_fact(cost_key, date_key, disaster_key, description_key, location_key, fatalities, injured, evacuated)
+Select c.cost_key, d.date_key, z.disaster_key, s.description_key, l.location_key, p.fatalities, p.injured, p.evacuated
+FROM "cost_dimension" c, "placeholder" p, "date_dimension" d, "disaster_dimension" z,
+ "summary_dimension" s, "location_dimension" l
+WHERE c.cost_key = p.sid AND p.sid = d.date_key AND p.sid = z.disaster_key AND p.sid = s.description_key
+AND p.sid = l.location_key;
