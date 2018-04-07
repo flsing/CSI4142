@@ -1,3 +1,4 @@
+Look at pdf version for figures and high-level schematic
 ### Background
 
 We designed, built and implemented a data mart using data on all disasters that have affected
